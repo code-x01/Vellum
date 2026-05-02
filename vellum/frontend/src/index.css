@@ -1,0 +1,107 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Vellum — Global Styles
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+/* ── Reset / Base ──────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width:  100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: #080810;
+  color: #e2e8f0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar         { width: 5px; height: 5px; }
+::-webkit-scrollbar-track   { background: transparent; }
+::-webkit-scrollbar-thumb   { background: rgba(139,92,246,0.3); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(139,92,246,0.6); }
+
+/* ── Glassmorphism utility ─────────────────────────────────────────────────── */
+.glass-dark {
+  background: rgba(12, 12, 22, 0.75);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+}
+
+/* ── Gradient text ─────────────────────────────────────────────────────────── */
+.text-gradient {
+  background: linear-gradient(135deg, #60a5fa, #a78bfa, #c084fc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Animated background grid ──────────────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(88,101,242,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(88,101,242,0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Ambient glow orbs ─────────────────────────────────────────────────────── */
+body::after {
+  content: '';
+  position: fixed;
+  top: -20%;
+  right: -15%;
+  width: 60vmin;
+  height: 60vmin;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+  animation: drift 20s ease-in-out infinite alternate;
+}
+
+/* ── Keyframes ─────────────────────────────────────────────────────────────── */
+@keyframes drift {
+  0%   { transform: translate(0, 0) scale(1.0); }
+  50%  { transform: translate(-5vw, 5vh) scale(1.1); }
+  100% { transform: translate(5vw, -4vh) scale(0.95); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0);     }
+}
+
+@keyframes pulseSlow {
+  0%, 100% { box-shadow: 0 0 30px rgba(139,92,246,0.35); }
+  50%       { box-shadow: 0 0 70px rgba(139,92,246,0.65); }
+}
+
+/* ── Animation classes ─────────────────────────────────────────────────────── */
+.animate-fade-in    { animation: fadeIn 0.35s ease both; }
+.animate-pulse-slow { animation: pulseSlow 3s ease-in-out infinite; }
+
+/* ── xterm.js overrides ────────────────────────────────────────────────────── */
+.xterm {
+  padding: 12px !important;
+}
+.xterm-viewport {
+  background: transparent !important;
+}
+.xterm-screen {
+  background: transparent !important;
+}
