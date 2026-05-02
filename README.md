@@ -55,8 +55,8 @@ A lightweight VM manager built with C++20, providing a browser-based GUI for cre
 ### For Linux Users
 
 ```bash
-git clone <repository-url>
-cd vellum
+git clone https://github.com/code-x01/Vellum.git
+cd Vellum
 chmod +x run.sh
 ./run.sh
 ```
@@ -72,7 +72,7 @@ Then open http://localhost:3000 in your browser.
 
 2. Run Vellum:
    ```cmd
-   cd path\to\vellum
+   cd path\to\Vellum
    run.bat
    ```
 
