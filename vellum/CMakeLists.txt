@@ -37,14 +37,31 @@ find_package(Boost REQUIRED COMPONENTS system)
 # ── Find OpenSSL (optional, for Crow HTTPS/WSS) ───────────────────────────────
 find_package(OpenSSL QUIET)
 
+# ═════════════════════════════════════════════════════════════════════════════
+# UPGRADES: Find nlohmann_json for configuration persistence (Task 2)
+# ═════════════════════════════════════════════════════════════════════════════
+find_package(nlohmann_json QUIET)
+if(NOT nlohmann_json_FOUND)
+    message(WARNING
+        "nlohmann_json not found. Install with: "
+        "sudo apt install nlohmann-json3-dev (Ubuntu/Debian) or "
+        "vcpkg install nlohmann-json (Vcpkg)")
+    # Continue anyway - JSON parsing is optional but recommended
+endif()
+
 # ── Source files ──────────────────────────────────────────────────────────────
 set(SOURCES
     src/main.cpp
     src/VMInstance.cpp
+    src/VMInstance_Upgrades.cpp
+    src/VMInstance_Mechanics.cpp
     src/HypervisorManager.cpp
+    src/HypervisorManager_Upgrades.cpp
     src/KVMRunLoop.cpp
     src/APIServer.cpp
+    src/cgroup/CgroupManager.cpp
     # WebSocketBridge.cpp is documentation-only, not compiled
+    # APIServer_Upgrades.cpp: Endpoints defined in this file for integration
 )
 
 # ── Executable ────────────────────────────────────────────────────────────────
@@ -62,6 +79,12 @@ target_link_libraries(vellum PRIVATE
     ${Boost_LIBRARIES}
     pthread
 )
+
+# Link nlohmann_json if available
+if(nlohmann_json_FOUND)
+    target_link_libraries(vellum PRIVATE nlohmann_json::nlohmann_json)
+endif()
+
 if(OpenSSL_FOUND)
     target_link_libraries(vellum PRIVATE OpenSSL::SSL OpenSSL::Crypto)
 endif()

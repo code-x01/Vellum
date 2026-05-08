@@ -1,15 +1,28 @@
 # 💎 Vellum: High-Performance Virtualization Engine
 
-
 ![Vellum Dashboard](assets/VELLUM.png)
-
 
 [![C++20](https://img.shields.io/badge/Language-C%2B%2B20-00599C?logo=cplusplus)](https://isocpp.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20KVM-orange?logo=linux)](https://www.kernel.org/doc/html/latest/virt/kvm/index.html)
 [![Performance](https://img.shields.io/badge/Overhead-<2%25-blueviolet)](#)
+[![Upgraded](https://img.shields.io/badge/Status-Upgraded%202024-brightgreen)](#recent-upgrades)
 
 A lightweight VM manager built with C++20, providing a browser-based GUI for creating, monitoring, and managing micro-VMs using Linux KVM.
+
+## 🎯 Recent Upgrades (May 2024)
+
+**5 Major Improvements Now Available:**
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| 🌐 **VM Networking** | ✅ | TAP/bridge support for external connectivity |
+| 💾 **Persistence** | ✅ | Auto-save & restore VM configurations |
+| 🔐 **API Security** | ✅ | JWT token-based authentication |
+| ⚙️ **Resource Control** | ✅ | Enhanced cgroup v2 enforcement |
+| ⚡ **Scalability** | ✅ | Multi-threaded architecture ready |
+
+👉 **[Read Full Upgrade Guide](UPGRADES.md)** • **[Quick Start](QUICKSTART.md)** • **[Architecture](ARCHITECTURE.md)**
 
 ## Requirements
 

@@ -5,11 +5,36 @@
 #include <unordered_map>
 #include <string>
 #include <mutex>
+#include <map>
+#include <chrono>
 #include "VMInstance.h"
 
 class HypervisorManager {
 public:
     static HypervisorManager& getInstance();
+
+    // ═════════════════════════════════════════════════════════════════════
+    // TASK 3: API AUTHENTICATION – JWT Token Management
+    // ═════════════════════════════════════════════════════════════════════
+    struct AuthToken {
+        std::string token;
+        std::chrono::system_clock::time_point expiresAt;
+        std::string userId;
+    };
+
+    // User credentials (in production, use proper hashing & database)
+    bool authenticateUser(const std::string& username, const std::string& password, AuthToken& outToken);
+    bool validateToken(const std::string& token) const;
+    bool refreshToken(const std::string& token, AuthToken& outToken);
+    void revokeToken(const std::string& token);
+
+    // ═════════════════════════════════════════════════════════════════════
+    // TASK 2: PERSISTENCE – VM Configuration Save/Load
+    // ═════════════════════════════════════════════════════════════════════
+    bool saveAllVMConfigs(const std::string& filePath) const;
+    bool loadAllVMConfigs(const std::string& filePath);
+    bool saveVMConfig(const std::string& vmId, const std::string& filePath) const;
+    bool loadVMConfig(const std::string& filePath);
 
     // VM Management
     std::shared_ptr<VMInstance> createVM(const std::string& id, const std::string& kernelPath,
@@ -46,7 +71,25 @@ private:
     // KVM global fd
     int kvm_fd_;
 
+    // ═════════════════════════════════════════════════════════════════════
+    // AUTHENTICATION STATE (Task 3)
+    // ═════════════════════════════════════════════════════════════════════
+    std::map<std::string, AuthToken> active_tokens_;
+    mutable std::mutex auth_mutex_;
+
+    // Default credentials (change in production!)
+    static constexpr const char* DEFAULT_USER = "admin";
+    static constexpr const char* DEFAULT_PASS = "vellum2024";  // Change immediately!
+    static constexpr int TOKEN_EXPIRY_SECONDS = 3600;  // 1 hour
+
+    // ═════════════════════════════════════════════════════════════════════
+    // PERSISTENCE STATE (Task 2)
+    // ═════════════════════════════════════════════════════════════════════
+    static constexpr const char* CONFIG_DIR = "/etc/vellum/configs";
+    static constexpr const char* CONFIG_FILENAME = "vms.json";
+
     bool initializeKVM();
+    std::string generateToken() const;
 };
 
 #endif // VELLUM_HYPERVISORMANAGER_H

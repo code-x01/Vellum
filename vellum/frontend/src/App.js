@@ -1,4 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
+import Stack from '@mui/material/Stack';
+import Button from '@mui/material/Button';
+import Divider from '@mui/material/Divider';
 import VMList from './components/VMList';
 import VMConsole from './components/VMConsole';
 import VMMetrics from './components/VMMetrics';
@@ -6,8 +13,55 @@ import VMMetrics from './components/VMMetrics';
 // ── API base (proxied via package.json's proxy or same origin in prod) ─────
 const API = '';
 
+const theme = createTheme({
+  palette: {
+    mode: 'dark',
+    primary: { main: '#7c3aed' },
+    secondary: { main: '#22d3ee' },
+    background: { default: '#07080f', paper: '#10121c' },
+  },
+  typography: {
+    fontFamily: 'Inter, system-ui, sans-serif',
+  },
+});
+
+const VM_TEMPLATES = [
+  {
+    id: 'linux-minimal',
+    label: 'Linux Minimal',
+    kernelPath: '/boot/vmlinuz-linux',
+    initrdPath: '',
+    diskPath: '/var/lib/vellum/disks/linux-minimal.img',
+    kernelCmdline: 'console=ttyS0 noapic',
+    memoryMB: 256,
+    vcpus: 1,
+  },
+  {
+    id: 'web-server',
+    label: 'Web Server',
+    kernelPath: '/boot/vmlinuz-linux',
+    initrdPath: '',
+    diskPath: '/var/lib/vellum/disks/web-server.img',
+    kernelCmdline: 'console=ttyS0 noapic',
+    memoryMB: 512,
+    vcpus: 2,
+  },
+  {
+    id: 'db-server',
+    label: 'Database',
+    kernelPath: '/boot/vmlinuz-linux',
+    initrdPath: '',
+    diskPath: '/var/lib/vellum/disks/db-server.img',
+    kernelCmdline: 'console=ttyS0 noapic',
+    memoryMB: 1024,
+    vcpus: 2,
+  },
+];
+
 function App() {
   const [selectedVM, setSelectedVM]   = useState(null);
+  const [selectedVMs, setSelectedVMs] = useState([]);
+  const [templateId, setTemplateId]   = useState('linux-minimal');
   const [vms, setVMs]                 = useState([]);
   const [telemetry, setTelemetry]     = useState({});
   const [globalStats, setGlobalStats] = useState(null);
@@ -21,6 +75,23 @@ function App() {
   const telemetryUrl = `${wsProto}://${backendHost}:${backendPort}/ws/telemetry`;
 
   const setMsg = useCallback((text, type = 'info') => setStatus({ text, type }), []);
+
+  const selectedTemplate = VM_TEMPLATES.find(t => t.id === templateId) || VM_TEMPLATES[0];
+
+  const toggleVMSelection = useCallback((id) => {
+    setSelectedVMs(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+  }, []);
+
+  const clearSelection = useCallback(() => setSelectedVMs([]), []);
+
+  const bulkAction = useCallback(async (action) => {
+    if (!selectedVMs.length) return;
+    setMsg(`${action} ${selectedVMs.length} VM(s)...`, 'info');
+    for (const id of selectedVMs) {
+      await vmAction(id, action);
+    }
+    clearSelection();
+  }, [selectedVMs, vmAction, setMsg, clearSelection]);
 
   // ── Fetch VM list ───────────────────────────────────────────────────────
   const fetchVMs = useCallback(async () => {
@@ -91,6 +162,11 @@ function App() {
     }
   };
 
+  const applyTemplate = useCallback((id) => {
+    setTemplateId(id);
+    setMsg(`Template selected: ${VM_TEMPLATES.find(t => t.id === id)?.label || id}`, 'success');
+  }, [setMsg]);
+
   const vmAction = useCallback(async (id, action, method = 'POST') => {
     try {
       const res    = await fetch(`${API}/api/vm/${id}/${action}`, { method });
@@ -108,8 +184,25 @@ function App() {
   const resumeVM = useCallback((id) => vmAction(id, 'resume'), [vmAction]);
   const deleteVM = useCallback(async (id) => {
     if (!window.confirm(`Permanently destroy VM "${id}"?`)) return;
-    vmAction(id, id, 'DELETE'); // DELETE /api/vm/{id}
-  }, [vmAction]);
+    try {
+      const res    = await fetch(`${API}/api/vm/${id}`, { method: 'DELETE' });
+      const result = await res.json();
+      setMsg(result.message || `VM ${id} destroyed`, res.ok ? 'success' : 'error');
+      if (selectedVM === id) setSelectedVM(null);
+      fetchVMs();
+    } catch {
+      setMsg('Network error — cannot destroy VM.', 'error');
+    }
+  }, [fetchVMs, selectedVM]);
+
+  const bulkDestroy = useCallback(async () => {
+    if (!selectedVMs.length) return;
+    if (!window.confirm(`Permanently destroy ${selectedVMs.length} selected VM(s)?`)) return;
+    for (const id of selectedVMs) {
+      await deleteVM(id);
+    }
+    clearSelection();
+  }, [selectedVMs, deleteVM, clearSelection]);
 
   // Special case: DELETE uses a different URL pattern
   const destroyVM = useCallback(async (id) => {
@@ -321,11 +414,64 @@ function App() {
       </aside>
 
       {/* ── Main ── */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top bar */}
-        <header className="flex items-center justify-between px-8 py-4
-                           border-b border-white/8"
-                style={{ background: 'rgba(10,10,20,0.7)', backdropFilter: 'blur(10px)' }}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <div className="flex h-screen w-full overflow-hidden text-gray-100" style={{ background: '#0a0a12' }}>
+          <div className="w-64 border-r border-white/8 flex flex-col p-6 shadow-2xl relative z-10"
+               style={{ background: 'rgba(10,10,20,0.9)', backdropFilter: 'blur(20px)' }}>
+             {/* Logo */}
+             <div className="flex items-center space-x-3 mb-12 mt-2">
+               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600
+                               flex items-center justify-center shadow-[0_0_20px_rgba(139,92,246,0.5)]">
+                 <span className="font-black text-white text-xl">V</span>
+               </div>
+               <span className="text-xl font-black tracking-[0.15em] text-transparent bg-clip-text
+                                bg-gradient-to-r from-white to-gray-400">
+                 VELLUM
+               </span>
+             </div>
+
+             <nav className="flex-1 space-y-1">
+               {navItems.map(({ id, icon, label }) => (
+                 <Button
+                   key={id}
+                   onClick={() => setCurrentPage(id)}
+                   fullWidth
+                   variant={currentPage === id ? 'contained' : 'text'}
+                   color={currentPage === id ? 'primary' : 'secondary'}
+                   sx={{
+                     justifyContent: 'flex-start',
+                     px: 2,
+                     py: 1.5,
+                     textTransform: 'none',
+                     borderRadius: '18px',
+                     fontWeight: 600,
+                   }}
+                 >
+                   <span className="mr-3 text-base">{icon}</span>
+                   {label}
+                 </Button>
+               ))}
+             </nav>
+
+             <div className="pt-6 border-t border-white/8 space-y-3">
+               <div className="flex items-center gap-2 px-2">
+                 <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse shadow-[0_0_6px_#4ade80]" />
+                 <span className="text-xs text-gray-500">Hypervisor Online</span>
+               </div>
+               <div className="flex items-center gap-2 px-2">
+                 <span className="w-2 h-2 rounded-full bg-blue-400" />
+                 <span className="text-xs text-gray-500">
+                   {vms.filter(v => v.state === 'Running').length} VM(s) running
+                 </span>
+               </div>
+             </div>
+           </div>
+
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <header className="flex items-center justify-between px-8 py-4
+                               border-b border-white/8"
+                    style={{ background: 'rgba(10,10,20,0.7)', backdropFilter: 'blur(10px)' }}>
           <span className="text-sm font-semibold text-gray-500 tracking-widest uppercase">
             {currentPage} Dashboard
           </span>
