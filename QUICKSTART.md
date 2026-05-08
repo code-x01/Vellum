@@ -46,7 +46,58 @@ sudo ip addr add 192.168.122.1/24 dev velbr0
 # Make persistent (add to /etc/network/interfaces or netplan)
 ```
 
-### 4. Setup GPU Passthrough (v2.0 - Optional)
+### 4. Use Proxychains (Optional)
+If your environment requires a proxy for network access, Vellum supports `proxychains` while building and running the backend.
+
+```bash
+# Run Vellum with default proxychains config
+./run.sh --proxychains
+
+# Run Vellum with a custom proxychains config file
+./run.sh --proxychains /etc/proxychains4.conf
+```
+
+If you want the React frontend development server to also use proxychains:
+
+```bash
+./start-frontend.sh --proxychains
+```
+
+### 5. Built-in Proxy Manager (v2.0)
+Vellum now includes a C++ Proxy Manager that can generate and manage proxychains configuration at runtime.
+
+#### Check proxy status
+```bash
+curl -X GET http://localhost:8080/api/proxy/status
+```
+
+#### Read the current config
+```bash
+curl -X GET http://localhost:8080/api/proxy/config
+```
+
+#### Write a new proxychains config
+```bash
+curl -X POST http://localhost:8080/api/proxy/config \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dynamicChain": true,
+    "proxyDNS": true,
+    "quietMode": true,
+    "proxies": [
+      {"type":"socks5","host":"127.0.0.1","port":9050}
+    ]
+  }'
+```
+
+#### Run a command through proxychains
+```bash
+curl -X POST http://localhost:8080/api/proxy/run \
+  -H "Content-Type: application/json" \
+  -d '{"command":["curl","https://ifconfig.me"]}'
+```
+
+### 6. Setup GPU Passthrough (v2.0 - Optional)
 ```bash
 # Enable IOMMU in kernel parameters (/etc/default/grub)
 # Add to GRUB_CMDLINE_LINUX_DEFAULT:
@@ -138,7 +189,39 @@ curl -X POST http://localhost:8080/api/vm/save-config \
 cat /etc/vellum/configs/vms.json
 ```
 
-### 7. Test GPU Passthrough (v2.0)
+### 7. Use the Built-in Proxy Manager (v2.0)
+Vellum can manage proxychains configuration and run commands through the proxy directly from the backend API.
+
+#### Check proxy status
+```bash
+curl -X GET http://localhost:8080/api/proxy/status \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+#### Create or update a proxychains config
+```bash
+curl -X POST http://localhost:8080/api/proxy/config \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dynamicChain": true,
+    "proxyDNS": true,
+    "quietMode": true,
+    "proxies": [
+      {"type":"socks5","host":"127.0.0.1","port":9050}
+    ]
+  }'
+```
+
+#### Run a command through proxychains
+```bash
+curl -X POST http://localhost:8080/api/proxy/run \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"command":["curl","https://ifconfig.me"]}'
+```
+
+### 8. Test GPU Passthrough (v2.0)
 ```bash
 # List available GPUs
 curl -X GET http://localhost:8080/api/gpu/available \

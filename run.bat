@@ -27,5 +27,5 @@ set "WSL_PATH=%WIN_PATH:\=/%"
 set "WSL_PATH=%WSL_PATH::=%"
 set "WSL_PATH=/mnt/%WSL_PATH%"
 
-echo Running: wsl bash "%WSL_PATH%run.sh"
-wsl bash "%WSL_PATH%run.sh"
+echo Running: wsl bash "%WSL_PATH%run.sh" %*
+wsl bash "%WSL_PATH%run.sh" %*

@@ -18,6 +18,7 @@ A production-ready hypervisor built with C++20, providing enterprise-grade virtu
 | Feature | Status | Description |
 |---------|--------|-------------|
 | 🎮 **GPU Passthrough** | ✅ **NEW** | Full IOMMU-based GPU acceleration for ML/AI workloads |
+| 🔀 **Proxy Manager** | ✅ **NEW** | Built-in Proxychains orchestration and runtime proxy execution |
 | 🏢 **Enterprise Security** | ✅ | JWT authentication, multi-tenancy, RBAC |
 | ☁️ **Cloud-Native** | 🔄 **Coming Soon** | Kubernetes operator, service mesh integration |
 | 📊 **Advanced Monitoring** | 🔄 **Coming Soon** | Prometheus metrics, distributed tracing |
@@ -73,6 +74,7 @@ For GPU passthrough functionality:
 - **VMInstance**: Represents individual VM instances with KVM integration
 - **HypervisorManager**: Singleton managing all VM instances
 - **GPUManager**: Handles GPU discovery, passthrough, and monitoring
+- **ProxyManager**: Manages proxychains configuration and advanced proxy routing
 - **APIServer**: REST API and WebSocket server using Crow framework
 - **Frontend**: React-based SPA with Material-UI and GPU management UI
 
@@ -93,6 +95,18 @@ git clone https://github.com/code-x01/Vellum.git
 cd Vellum
 chmod +x run.sh
 ./run.sh
+```
+
+If you need to route Vellum through a proxy, use `proxychains`:
+
+```bash
+./run.sh --proxychains
+```
+
+To specify a custom proxychains config file:
+
+```bash
+./run.sh --proxychains /path/to/proxychains.conf
 ```
 
 Then open http://localhost:3000 in your browser.
@@ -175,6 +189,12 @@ Note: `--privileged` is required for KVM access.
 - `DELETE /api/vm/{id}/gpu/{gpu_id}` - Detach GPU from VM
 - `GET /api/vm/{id}/gpu` - Get VM GPU status
 - `POST /api/gpu/check-iommu` - Check IOMMU status
+
+#### Proxy Management (v2.0)
+- `GET /api/proxy/status` - Get proxychains install and config status
+- `GET /api/proxy/config` - Load the current proxychains config
+- `POST /api/proxy/config` - Write a new proxychains config
+- `POST /api/proxy/run` - Execute a command through proxychains
 
 ### WebSocket Endpoints
 - `/ws/console/{id}` - VM console access

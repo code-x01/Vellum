@@ -5,6 +5,25 @@
 
 set -e
 
+PROXY_COMMAND=""
+PROXY_CONFIG=""
+
+if [[ "$1" == "--proxychains" ]]; then
+    shift
+    if [[ "$1" != "" && "$1" != --* ]]; then
+        PROXY_CONFIG="$1"
+        shift
+    fi
+    if command -v proxychains4 >/dev/null 2>&1; then
+        PROXY_COMMAND="proxychains4"
+    elif command -v proxychains >/dev/null 2>&1; then
+        PROXY_COMMAND="proxychains"
+    else
+        echo "Error: proxychains is not installed. Install proxychains4 or proxychains to use this feature."
+        exit 1
+    fi
+fi
+
 echo "=== Vellum Hypervisor Setup ==="
 
 # Check if we're on Linux
@@ -25,6 +44,18 @@ if [[ ! -c /dev/kvm ]]; then
     echo "On WSL2, ensure virtualization is enabled in Windows and WSL2 is configured."
 fi
 
+run_with_proxy() {
+    if [[ -n "$PROXY_COMMAND" ]]; then
+        if [[ -n "$PROXY_CONFIG" ]]; then
+            "$PROXY_COMMAND" -f "$PROXY_CONFIG" "$@"
+        else
+            "$PROXY_COMMAND" "$@"
+        fi
+    else
+        "$@"
+    fi
+}
+
 # Build backend
 echo "Building backend..."
 mkdir -p vellum/build
@@ -35,8 +66,8 @@ make -j$(nproc)
 # Build frontend
 echo "Building frontend..."
 cd ../frontend
-npm install
-npm run build
+run_with_proxy npm install
+run_with_proxy npm run build
 
 # Run backend
 echo "Starting Vellum backend..."
@@ -50,4 +81,4 @@ echo "To access the UI, open http://localhost:3000 in your browser"
 echo "To stop, press Ctrl+C"
 echo ""
 
-./vellum
+run_with_proxy ./vellum

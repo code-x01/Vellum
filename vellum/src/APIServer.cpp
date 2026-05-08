@@ -15,6 +15,7 @@
 
 #include "APIServer.h"
 #include "HypervisorManager.h"
+#include "ProxyManager.h"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -222,6 +223,120 @@ void APIServer::setupRoutes() {
             arr[i]          = std::move(entry);
         }
         crow::response res(arr);
+        addAPIHeaders(res);
+        return res;
+    });
+
+    // ── GET /api/proxy/status ──────────────────────────────────────────────
+    CROW_ROUTE(app_, "/api/proxy/status")
+    .methods("GET"_method)([](const crow::request&) {
+        if (!g_proxy_manager) return jsonErr(500, "Proxy manager unavailable");
+        crow::json::wvalue j;
+        j["installed"]         = g_proxy_manager->isInstalled();
+        j["binaryPath"]        = g_proxy_manager->getBinaryPath();
+        j["defaultConfigPath"] = g_proxy_manager->getDefaultConfigPath();
+        j["configExists"]      = g_proxy_manager->configExists();
+        crow::response res(j);
+        addAPIHeaders(res);
+        return res;
+    });
+
+    // ── GET /api/proxy/config ──────────────────────────────────────────────
+    CROW_ROUTE(app_, "/api/proxy/config")
+    .methods("GET"_method)([](const crow::request&) {
+        if (!g_proxy_manager) return jsonErr(500, "Proxy manager unavailable");
+        std::string err;
+        auto config = g_proxy_manager->loadConfigFile(g_proxy_manager->getDefaultConfigPath(), err);
+        if (!config) return jsonErr(404, err);
+
+        crow::json::wvalue j;
+        j["dynamicChain"] = config->dynamic_chain;
+        j["strictChain"]  = config->strict_chain;
+        j["proxyDNS"]     = config->proxy_dns;
+        j["quietMode"]    = config->quiet_mode;
+        crow::json::wvalue list = crow::json::wvalue::list();
+        for (size_t idx = 0; idx < config->proxies.size(); ++idx) {
+            const auto& proxy = config->proxies[idx];
+            crow::json::wvalue entry;
+            entry["type"] = proxy.type;
+            entry["host"] = proxy.host;
+            entry["port"] = proxy.port;
+            entry["username"] = proxy.username ? *proxy.username : "";
+            entry["password"] = proxy.password ? *proxy.password : "";
+            list[idx] = std::move(entry);
+        }
+        j["proxies"] = std::move(list);
+        crow::response res(j);
+        addAPIHeaders(res);
+        return res;
+    });
+
+    // ── POST /api/proxy/config ─────────────────────────────────────────────
+    CROW_ROUTE(app_, "/api/proxy/config")
+    .methods("POST"_method)([](const crow::request& req) {
+        if (!g_proxy_manager) return jsonErr(500, "Proxy manager unavailable");
+        auto json = crow::json::load(req.body);
+        if (!json) return jsonErr(400, "Invalid JSON body");
+
+        ProxyConfig config;
+        config.dynamic_chain = json.has("dynamicChain") ? json["dynamicChain"].b() : false;
+        config.strict_chain  = json.has("strictChain") ? json["strictChain"].b() : !config.dynamic_chain;
+        config.proxy_dns     = json.has("proxyDNS") ? json["proxyDNS"].b() : true;
+        config.quiet_mode    = json.has("quietMode") ? json["quietMode"].b() : false;
+
+        if (json.has("proxies") && json["proxies"].is_list()) {
+            for (size_t i = 0; i < json["proxies"].size(); ++i) {
+                const auto& proxy = json["proxies"][i];
+                if (!proxy.has("type") || !proxy.has("host") || !proxy.has("port")) {
+                    return jsonErr(400, "Each proxy entry must contain type, host, and port.");
+                }
+                ProxyChainEntry entry;
+                entry.type = proxy["type"].s();
+                entry.host = proxy["host"].s();
+                entry.port = static_cast<uint16_t>(proxy["port"].i());
+                if (proxy.has("username")) entry.username = proxy["username"].s();
+                if (proxy.has("password")) entry.password = proxy["password"].s();
+                config.proxies.push_back(std::move(entry));
+            }
+        }
+
+        if (config.proxies.empty()) {
+            return jsonErr(400, "At least one proxy entry is required.");
+        }
+
+        std::string err;
+        if (!g_proxy_manager->writeConfigFile(g_proxy_manager->getDefaultConfigPath(), config, err)) {
+            return jsonErr(500, err);
+        }
+        return jsonOK("Proxychains configuration saved.");
+    });
+
+    // ── POST /api/proxy/run ────────────────────────────────────────────────
+    CROW_ROUTE(app_, "/api/proxy/run")
+    .methods("POST"_method)([](const crow::request& req) {
+        if (!g_proxy_manager) return jsonErr(500, "Proxy manager unavailable");
+        auto json = crow::json::load(req.body);
+        if (!json || !json.has("command") || !json["command"].is_list()) {
+            return jsonErr(400, "Invalid JSON body -- expected { command: [ ... ] }");
+        }
+
+        std::vector<std::string> command;
+        for (size_t i = 0; i < json["command"].size(); ++i) {
+            command.push_back(json["command"][i].s());
+        }
+
+        std::string configPath = json.has("configPath") ? json["configPath"].s() : g_proxy_manager->getDefaultConfigPath();
+        std::string output;
+        int exit_code = 0;
+        std::string err;
+        if (!g_proxy_manager->runCommand(command, configPath, output, exit_code, err)) {
+            return jsonErr(500, err);
+        }
+
+        crow::json::wvalue j;
+        j["exitCode"] = exit_code;
+        j["output"]   = output;
+        crow::response res(j);
         addAPIHeaders(res);
         return res;
     });

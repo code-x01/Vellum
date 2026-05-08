@@ -3,6 +3,7 @@
 #include "HypervisorManager.h"
 #include "APIServer.h"
 #include "GPUManager.h"
+#include "ProxyManager.h"
 
 int main(int argc, char* argv[]) {
     std::cout << "Starting Vellum..." << std::endl;
@@ -10,6 +11,12 @@ int main(int argc, char* argv[]) {
     // Initialize GPU manager
     g_gpu_manager = std::make_unique<GPUManager>();
     std::cout << "GPU manager initialized" << std::endl;
+
+    // Initialize proxy manager
+    g_proxy_manager = std::make_unique<ProxyManager>();
+    std::cout << "Proxy manager initialized: "
+              << (g_proxy_manager->isInstalled() ? "installed" : "not installed")
+              << " (" << g_proxy_manager->getBinaryPath() << ")" << std::endl;
 
     // Determine frontend build directory relative to the executable
     std::filesystem::path exe_path = std::filesystem::canonical(argv[0]);
