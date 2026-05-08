@@ -55,6 +55,7 @@ set(SOURCES
     src/VMInstance.cpp
     src/VMInstance_Upgrades.cpp
     src/VMInstance_Mechanics.cpp
+    src/GPUManager.cpp
     src/HypervisorManager.cpp
     src/HypervisorManager_Upgrades.cpp
     src/KVMRunLoop.cpp

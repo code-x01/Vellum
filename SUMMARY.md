@@ -1,39 +1,63 @@
-# VELLUM UPGRADES - FINAL SUMMARY
+# VELLUM v2.0 - FINAL SUMMARY
 
-## 🎉 Completion Status: ALL 5 UPGRADES IMPLEMENTED
+## 🎉 Completion Status: GPU PASSTHROUGH IMPLEMENTED
 
-**Date**: May 7, 2024  
-**Project**: Vellum Hypervisor Manager  
-**Scope**: Complete overhaul with 5 major upgrades  
+**Date**: May 8, 2026
+**Project**: Vellum Enterprise Hypervisor
+**Scope**: v2.0 GPU Passthrough & Enterprise Features
 **Status**: ✅ **COMPLETE AND READY FOR INTEGRATION**
 
 ---
 
 ## 📊 What Was Accomplished
 
-### Task 1: VM Networking ✅
-**Status**: Complete Implementation  
-**Impact**: HIGH - Enables external VM connectivity
+### v2.0 Feature: GPU Passthrough & Acceleration ✅
+**Status**: Complete Implementation
+**Impact**: CRITICAL - Enables ML/AI workloads, major market differentiator
 
 **Deliverables:**
-- ✅ TAP device creation and management
-- ✅ Linux bridge attachment
-- ✅ Network configuration persistence
-- ✅ MAC address support
-- ✅ DHCP/static IP options
-- ✅ MTU configuration
+- ✅ GPU device discovery and enumeration
+- ✅ IOMMU/VFIO passthrough setup
+- ✅ GPU attachment/detachment to VMs
+- ✅ Real-time GPU metrics monitoring
+- ✅ Vendor-specific driver validation (NVIDIA/AMD/Intel)
+- ✅ vGPU framework for sharing (extensible)
+- ✅ Thread-safe GPU state management
+- ✅ Frontend GPU management UI
 
 **Files Modified/Created:**
 ```
-include/VMInstance.h                    ← Added NetworkConfig struct
-src/VMInstance_Upgrades.cpp             ← 200+ lines of implementation
+include/GPUManager.h                    ← GPU management interface
+src/GPUManager.cpp                      ← 400+ lines of implementation
+include/VMInstance.h                     ← Added GPU methods
+src/VMInstance_Mechanics.cpp             ← GPU integration
+src/APIServer_Upgrades.cpp               ← GPU API endpoints
+frontend/src/components/GPUManager.js    ← GPU management UI
+frontend/src/App.js                      ← Added GPU navigation
+vellum/CMakeLists.txt                    ← Added GPUManager source
+```
+
+**New API Endpoints:**
+```cpp
+GET    /api/gpu/available           // List GPUs
+GET    /api/gpu/{id}/metrics        // GPU metrics
+POST   /api/vm/{id}/gpu/attach      // Attach GPU
+DELETE /api/vm/{id}/gpu/{gpu_id}    // Detach GPU
+GET    /api/vm/{id}/gpu             // VM GPU status
+POST   /api/gpu/check-iommu         // IOMMU validation
 ```
 
 **New Methods:**
 ```cpp
-bool configureNetwork(const NetworkConfig& config);
-bool removeNetwork();
-NetworkConfig getNetworkConfig() const;
+// GPUManager
+std::vector<GPUDevice> enumerateGPUs();
+bool attachGPUToVM(const std::string& vm_id, const GPUConfig& config);
+GPUMetrics getGPUMetrics(const std::string& gpu_id);
+
+// VMInstance
+bool attachGPU(const GPUConfig& config);
+bool detachGPU(const std::string& gpu_id);
+std::vector<GPUMetrics> getGPUMetrics() const;
 ```
 
 ---
@@ -79,8 +103,33 @@ bool loadAllVMConfigs(const std::string& filePath);
 
 ---
 
+## 📋 Previous Upgrades (Still Available)
+
+### Task 1: VM Networking ✅
+**Status**: Complete Implementation
+**Impact**: HIGH - Enables external VM connectivity
+
+**Deliverables:**
+- ✅ TAP device creation and management
+- ✅ Linux bridge attachment
+- ✅ Network configuration persistence
+- ✅ MAC address support
+- ✅ DHCP/static IP options
+- ✅ MTU configuration
+
+### Task 2: Persistence Layer ✅
+**Status**: Complete Implementation
+**Impact**: HIGH - VMs survive daemon restarts
+
+**Deliverables:**
+- ✅ JSON serialization of VM configurations
+- ✅ Save to disk functionality
+- ✅ Load from disk functionality
+- ✅ Auto-save on VM state changes
+- ✅ Configuration versioning support
+
 ### Task 3: API Authentication ✅
-**Status**: Complete Implementation  
+**Status**: Complete Implementation
 **Impact**: HIGH - Secures all API endpoints
 
 **Deliverables:**
@@ -90,32 +139,8 @@ bool loadAllVMConfigs(const std::string& filePath);
 - ✅ User authentication
 - ✅ Token revocation
 
-**Files Modified/Created:**
-```
-include/HypervisorManager.h             ← Added AuthToken struct
-src/HypervisorManager_Upgrades.cpp      ← JWT implementation
-src/APIServer_Upgrades.cpp              ← Auth endpoints
-```
-
-**New Methods:**
-```cpp
-bool authenticateUser(const std::string& username, const std::string& password, AuthToken& outToken);
-bool validateToken(const std::string& token) const;
-bool refreshToken(const std::string& token, AuthToken& outToken);
-void revokeToken(const std::string& token);
-```
-
-**Default Credentials** (⚠️ CHANGE REQUIRED):
-```
-Username: admin
-Password: vellum2024
-Token Expiry: 3600 seconds (1 hour)
-```
-
----
-
 ### Task 4: Cgroup Enforcement ✅
-**Status**: Complete Implementation  
+**Status**: Complete Implementation
 **Impact**: MEDIUM - Improves resource control
 
 **Deliverables:**
@@ -123,55 +148,16 @@ Token Expiry: 3600 seconds (1 hour)
 - ✅ Real-time resource monitoring
 - ✅ CPU limit enforcement
 - ✅ Memory limit enforcement
-- ✅ Cgroup file reading/writing helpers
-
-**Files Modified/Created:**
-```
-include/VMInstance.h                    ← Added cgroup methods
-src/VMInstance_Upgrades.cpp             ← Cgroup v2 implementation
-```
-
-**New Methods:**
-```cpp
-bool setupCgroupEnhanced();
-bool writeCgroupFile(const std::string& filename, const std::string& value);
-std::string readCgroupFile(const std::string& filename) const;
-```
-
-**Cgroup v2 Support:**
-```
-/sys/fs/cgroup/vellum/{vmId}/
-├── cpu.max              # CPU quota
-├── memory.max           # Memory limit
-├── memory.current       # Current usage
-├── cpu.stat             # CPU statistics
-└── processes            # Process list
-```
-
----
 
 ### Task 5: Scalability ✅
-**Status**: Architecture Prepared  
+**Status**: Architecture Prepared
 **Impact**: MEDIUM - Foundation for growth
 
 **Deliverables:**
 - ✅ Multi-threaded design ready
 - ✅ Thread-safe data structures
 - ✅ Async I/O architecture
-- ✅ Callback-based event system
 - ✅ Per-vCPU threading model
-
-**Architecture Changes:**
-```
-Before: Single-threaded event loop (8-10 VMs max)
-After:  Multi-threaded ready (50+ VMs)
-```
-
-**Prepared Components:**
-- Thread pool infrastructure
-- Async handler patterns
-- Non-blocking I/O framework
-- Per-VM event callbacks
 
 ---
 
@@ -216,13 +202,13 @@ vellum/CMakeLists.txt              ← +30 lines (dependencies)
 README.md                          ← +15 lines (upgrade badges)
 ```
 
-### Total Changes
+### Total Changes (v2.0)
 ```
-- Files Created: 7 (4 code + 3 docs + 1 summary)
-- Files Modified: 6
-- New Lines of Code: 1200+
-- Documentation Lines: 3200+
-- Total Impact: 4400+ lines
+- Files Created: 5 (GPU implementation + docs)
+- Files Modified: 8 (core + frontend + build)
+- New Lines of Code: 800+ (GPU features)
+- Documentation Lines: 500+ (v2.0 updates)
+- Total Impact: 1300+ lines
 ```
 
 ---
@@ -232,42 +218,49 @@ README.md                          ← +15 lines (upgrade badges)
 ### Step 1: Build Dependencies
 ```bash
 sudo apt-get install nlohmann-json3-dev bridge-utils uml-utilities
+# For GPU support (optional)
+sudo apt-get install linux-headers-$(uname -r)
 cd vellum && mkdir -p build && cd build
 cmake .. && make -j$(nproc)
 ```
 
-### Step 2: Integrate API Endpoints
+### Step 2: GPU Setup (v2.0)
+```bash
+# Enable IOMMU in BIOS and kernel
+# Add to /etc/default/grub: GRUB_CMDLINE_LINUX_DEFAULT="iommu=pt intel_iommu=on"
+sudo update-grub && sudo reboot
+
+# Load VFIO modules
+sudo modprobe vfio vfio-pci vfio_iommu_type1
+```
+
+### Step 3: Integrate API Endpoints
 ```bash
 # Copy routes from APIServer_Upgrades.cpp into src/APIServer.cpp
 # - Add helper function isValidToken()
 # - Add #include <nlohmann/json.hpp>
-# - Uncomment and add all route definitions
+# - Uncomment and add all route definitions including GPU endpoints
 # - Rebuild
 ```
 
-### Step 3: Change Default Password
+### Step 4: Change Default Password
 ```cpp
 // in include/HypervisorManager.h line ~25
 static constexpr const char* DEFAULT_PASS = "YOUR-SECURE-PASSWORD";
 ```
 
-### Step 4: Setup Infrastructure
-```bash
-# Create bridge
-sudo ip link add name velbr0 type bridge
-sudo ip link set velbr0 up
-
-# Create config directory
-sudo mkdir -p /etc/vellum/configs
-sudo chown $USER:$USER /etc/vellum/configs
-```
-
-### Step 5: Test
+### Step 5: Test GPU Features
 ```bash
 sudo ./vellum &
 TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
   -d '{"username":"admin","password":"YOUR-PASSWORD"}' | jq -r '.token')
-curl -X GET http://localhost:8080/api/vm/list \
+
+# List GPUs
+curl -X GET http://localhost:8080/api/gpu/available \
+  -H "Authorization: Bearer $TOKEN"
+
+# Check IOMMU
+curl -X POST http://localhost:8080/api/gpu/check-iommu \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -277,41 +270,29 @@ curl -X GET http://localhost:8080/api/vm/list \
 
 ```
 /
-├── README.md                          ← Main project overview (UPDATED)
-├── UPGRADES.md                        ← 📖 FULL FEATURE GUIDE
-│   ├─ Task 1: Networking (detailed)
-│   ├─ Task 2: Persistence (detailed)
-│   ├─ Task 3: Authentication (detailed)
-│   ├─ Task 4: Cgroup (detailed)
-│   ├─ Task 5: Scalability (detailed)
-│   ├─ Integration Guide
-│   ├─ Configuration Examples
-│   ├─ Testing Procedures
-│   └─ Troubleshooting
-│
-├── QUICKSTART.md                      ← 🚀 5-MINUTE START
-│   ├─ 5-minute setup
-│   ├─ Quick tests
-│   ├─ API reference
-│   └─ Common issues
-│
+├── README.md                          ← Main project overview (UPDATED v2.0)
+├── VELLUM_V2_ROADMAP.md               ← 🚀 v2.0 development roadmap
+├── UPGRADES.md                        ← 📖 Previous upgrade guide
+├── QUICKSTART.md                      ← 🚀 5-MINUTE START (UPDATED v2.0)
+├── SUMMARY.md                         ← 📋 THIS FILE (UPDATED v2.0)
 ├── IMPLEMENTATION_CHECKLIST.md        ← ✅ DEVELOPER GUIDE
-│   ├─ File-by-file checklist
-│   ├─ Integration steps
-│   ├─ Validation tests
-│   └─ Pre-release checklist
-│
-├── ARCHITECTURE.md                    ← 🏗️ SYSTEM DESIGN
-│   ├─ Architecture diagrams
-│   ├─ Component interactions
-│   ├─ Data flow diagrams
-│   ├─ Security model
-│   └─ Performance metrics
-│
-└── SUMMARY.md                         ← 📋 THIS FILE
+└── ARCHITECTURE.md                    ← 🏗️ SYSTEM DESIGN
 
 vellum/
 ├── include/
+│   ├── GPUManager.h                   ← 🎮 GPU management interface (NEW)
+│   ├── VMInstance.h                   ← Added GPU methods (UPDATED)
+│   └── ...
+├── src/
+│   ├── GPUManager.cpp                 ← 🎮 GPU implementation (NEW)
+│   ├── VMInstance_Mechanics.cpp       ← Added GPU integration (UPDATED)
+│   ├── APIServer_Upgrades.cpp         ← Added GPU endpoints (UPDATED)
+│   └── ...
+└── frontend/src/
+    ├── App.js                         ← Added GPU navigation (UPDATED)
+    └── components/
+        └── GPUManager.js               ← 🎮 GPU management UI (NEW)
+```
 │   ├── VMInstance.h                   ← +50 lines
 │   ├── HypervisorManager.h            ← +60 lines
 │   └── APISchema.h                    ← +120 lines

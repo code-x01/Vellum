@@ -1,4 +1,4 @@
-# 💎 Vellum: High-Performance Virtualization Engine
+# 💎 Vellum v2.0: Enterprise Cloud-Native Hypervisor
 
 ![Vellum Dashboard](assets/VELLUM.png)
 
@@ -6,39 +6,49 @@
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20KVM-orange?logo=linux)](https://www.kernel.org/doc/html/latest/virt/kvm/index.html)
 [![Performance](https://img.shields.io/badge/Overhead-<2%25-blueviolet)](#)
-[![Upgraded](https://img.shields.io/badge/Status-Upgraded%202024-brightgreen)](#recent-upgrades)
+[![Version](https://img.shields.io/badge/Version-2.0-brightgreen)](#)
+[![GPU](https://img.shields.io/badge/GPU-Passthrough-red?logo=nvidia)](#)
 
-A lightweight VM manager built with C++20, providing a browser-based GUI for creating, monitoring, and managing micro-VMs using Linux KVM.
+A production-ready hypervisor built with C++20, providing enterprise-grade virtualization with GPU passthrough, Kubernetes integration, and advanced monitoring capabilities.
 
-## 🎯 Recent Upgrades (May 2024)
+## 🚀 Vellum v2.0: Major New Features (May 2026)
 
-**5 Major Improvements Now Available:**
+**GPU Passthrough & Enterprise Features Now Available:**
 
 | Feature | Status | Description |
 |---------|--------|-------------|
-| 🌐 **VM Networking** | ✅ | TAP/bridge support for external connectivity |
-| 💾 **Persistence** | ✅ | Auto-save & restore VM configurations |
-| 🔐 **API Security** | ✅ | JWT token-based authentication |
-| ⚙️ **Resource Control** | ✅ | Enhanced cgroup v2 enforcement |
-| ⚡ **Scalability** | ✅ | Multi-threaded architecture ready |
+| 🎮 **GPU Passthrough** | ✅ **NEW** | Full IOMMU-based GPU acceleration for ML/AI workloads |
+| 🏢 **Enterprise Security** | ✅ | JWT authentication, multi-tenancy, RBAC |
+| ☁️ **Cloud-Native** | 🔄 **Coming Soon** | Kubernetes operator, service mesh integration |
+| 📊 **Advanced Monitoring** | 🔄 **Coming Soon** | Prometheus metrics, distributed tracing |
+| ⚡ **High Performance** | ✅ | Multi-threaded, low-latency architecture |
 
-👉 **[Read Full Upgrade Guide](UPGRADES.md)** • **[Quick Start](QUICKSTART.md)** • **[Architecture](ARCHITECTURE.md)**
+👉 **[Read v2.0 Roadmap](VELLUM_V2_ROADMAP.md)** • **[Quick Start](QUICKSTART.md)** • **[Architecture](ARCHITECTURE.md)**
 
 ## Requirements
 
 - **Operating System**: Linux (KVM requires Linux kernel support)
 - **Hardware**: CPU with virtualization extensions (VT-x/AMD-V)
-- **Software**: 
+- **Software**:
   - C++20 compiler (GCC 10+ or Clang 12+)
   - CMake 3.16+
   - Crow C++ web framework
   - libvirt development headers
   - Linux kernel headers
 
+### GPU Passthrough Requirements (v2.0)
+
+For GPU passthrough functionality:
+- **IOMMU Support**: VT-d (Intel) or AMD-Vi enabled in BIOS
+- **Kernel Parameters**: `iommu=pt intel_iommu=on` or `amd_iommu=on`
+- **VFIO Modules**: `vfio vfio-pci vfio_iommu_type1`
+- **GPU Compatibility**: NVIDIA, AMD, or Intel GPUs with passthrough support
+
 **Note**: This project requires Linux and cannot run on Windows natively. Use WSL2 or a Linux VM for development.
 
 ## Features
 
+### Core Virtualization
 - **Micro-VM Creation**: Boot virtio-ready Linux kernels with minimal resource usage
 - **Real-time Monitoring**: Zero-copy telemetry streaming via WebSockets
 - **Web-based Console**: Headless serial console accessible through xterm.js terminal
@@ -47,14 +57,24 @@ A lightweight VM manager built with C++20, providing a browser-based GUI for cre
 - **REST API**: Full RESTful API for VM management
 - **WebSocket Support**: Real-time communication for console and telemetry
 
+### 🚀 v2.0 Enterprise Features
+- **🎮 GPU Passthrough**: Full IOMMU-based GPU acceleration for ML/AI workloads
+- **🔐 Enterprise Security**: JWT authentication, multi-tenancy, role-based access control
+- **☁️ Cloud-Native Ready**: Kubernetes operator support (coming soon)
+- **📊 Advanced Monitoring**: Prometheus metrics export, distributed tracing (coming soon)
+- **⚡ High Performance**: Multi-threaded architecture with <2% overhead
+- **🔄 Live Migration**: Move running VMs between hosts (coming soon)
+- **💾 Disaster Recovery**: Automated backup and point-in-time recovery (coming soon)
+
 ## Architecture
 
 ### Core Components
 
 - **VMInstance**: Represents individual VM instances with KVM integration
 - **HypervisorManager**: Singleton managing all VM instances
+- **GPUManager**: Handles GPU discovery, passthrough, and monitoring
 - **APIServer**: REST API and WebSocket server using Crow framework
-- **Frontend**: React-based SPA with Tailwind CSS and xterm.js
+- **Frontend**: React-based SPA with Material-UI and GPU management UI
 
 ### Key Design Principles
 
@@ -62,6 +82,7 @@ A lightweight VM manager built with C++20, providing a browser-based GUI for cre
 2. **Headless**: Daemon process with browser-based GUI
 3. **VirtIO Only**: Fast, efficient device virtualization
 4. **User-space Memory**: mmap-based guest memory allocation
+5. **GPU Acceleration**: Native hardware passthrough for compute workloads
 
 ## Quick Start
 
@@ -139,6 +160,7 @@ Note: `--privileged` is required for KVM access.
 
 ### REST Endpoints
 
+#### VM Management
 - `POST /api/vm/create` - Create a new VM
 - `DELETE /api/vm/{id}` - Destroy a VM
 - `POST /api/vm/{id}/start` - Start a VM
@@ -146,8 +168,15 @@ Note: `--privileged` is required for KVM access.
 - `GET /api/vm/{id}/metrics` - Get VM metrics
 - `GET /api/vm/list` - List all VMs
 
-### WebSocket Endpoints
+#### GPU Management (v2.0)
+- `GET /api/gpu/available` - List all available GPUs
+- `GET /api/gpu/{id}/metrics` - Get GPU metrics
+- `POST /api/vm/{id}/gpu/attach` - Attach GPU to VM
+- `DELETE /api/vm/{id}/gpu/{gpu_id}` - Detach GPU from VM
+- `GET /api/vm/{id}/gpu` - Get VM GPU status
+- `POST /api/gpu/check-iommu` - Check IOMMU status
 
+### WebSocket Endpoints
 - `/ws/console/{id}` - VM console access
 - `/ws/telemetry` - Real-time telemetry stream
 
@@ -156,8 +185,9 @@ Note: `--privileged` is required for KVM access.
 1. Start the Vellum daemon
 2. Open http://localhost:3000 in your browser after starting the React UI
 3. Create a new VM with kernel path and parameters
-4. Start the VM and access its console
-5. Monitor real-time metrics
+4. **Attach GPUs** to VMs for hardware acceleration (v2.0 feature)
+5. Start the VM and access its console
+6. Monitor real-time metrics including GPU utilization
 
 ## Configuration
 

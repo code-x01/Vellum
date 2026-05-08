@@ -2,9 +2,14 @@
 #include <iostream>
 #include "HypervisorManager.h"
 #include "APIServer.h"
+#include "GPUManager.h"
 
 int main(int argc, char* argv[]) {
     std::cout << "Starting Vellum..." << std::endl;
+
+    // Initialize GPU manager
+    g_gpu_manager = std::make_unique<GPUManager>();
+    std::cout << "GPU manager initialized" << std::endl;
 
     // Determine frontend build directory relative to the executable
     std::filesystem::path exe_path = std::filesystem::canonical(argv[0]);

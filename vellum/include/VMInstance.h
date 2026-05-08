@@ -19,6 +19,7 @@
 
 // Forward declarations
 class HypervisorManager;
+class GPUManager;
 
 class VMInstance {
 public:
@@ -115,6 +116,35 @@ public:
         size_t memory_soft_limit = 0;
     };
     bool configureQoS(const QoSConfig& config);
+
+    // ═════════════════════════════════════════════════════════════════════
+    // V2.0: GPU PASSTHROUGH & ACCELERATION
+    // ═════════════════════════════════════════════════════════════════════
+    struct GPUConfig {
+        std::string gpu_id;                // GPU to attach
+        bool enable_vgpu;                  // Enable virtual GPU sharing
+        std::optional<uint32_t> vgpu_memory_mb; // Memory allocation for vGPU
+        std::optional<uint32_t> vgpu_profiles;  // Number of vGPU profiles
+    };
+
+    struct GPUMetrics {
+        std::string gpu_id;
+        double utilization_percent;        // GPU utilization (0-100)
+        double memory_utilization_percent; // Memory utilization (0-100)
+        uint64_t memory_used_mb;           // Memory used in MB
+        uint64_t memory_total_mb;          // Total memory in MB
+        double temperature_celsius;        // GPU temperature
+        uint64_t power_draw_watts;         // Power consumption
+        uint64_t fan_speed_percent;        // Fan speed (0-100)
+        uint64_t clock_speed_mhz;          // Current clock speed
+    };
+
+    // GPU Management
+    bool attachGPU(const GPUConfig& config);
+    bool detachGPU(const std::string& gpu_id);
+    std::vector<std::string> getAttachedGPUs() const;
+    std::vector<GPUMetrics> getGPUMetrics() const;
+    bool isGPUAttached(const std::string& gpu_id) const;
 
     // ═════════════════════════════════════════════════════════════════════
     // UPGRADE 1: VM NETWORKING – TAP/Bridge support for external connectivity
@@ -239,6 +269,10 @@ private:
 
     // QoS
     QoSConfig qos_config_;
+
+    // GPU Support
+    std::vector<std::string> attached_gpus_;
+    std::mutex gpu_mutex_;
 
     // ── Internal helpers ─────────────────────────────────────────────────────
     bool initializeKVM();

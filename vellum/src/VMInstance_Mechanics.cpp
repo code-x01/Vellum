@@ -758,5 +758,101 @@ private:
     // QoS
     QoSConfig qos_config_;
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// V2.0: GPU PASSTHROUGH & ACCELERATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+bool VMInstance::attachGPU(const GPUConfig& config) {
+    std::lock_guard<std::mutex> lock(gpu_mutex_);
+
+    // Check if GPU is already attached
+    if (std::find(attached_gpus_.begin(), attached_gpus_.end(), config.gpu_id) != attached_gpus_.end()) {
+        std::cerr << "GPU " << config.gpu_id << " already attached to VM " << id_ << std::endl;
+        return false;
+    }
+
+    // Use global GPU manager to attach GPU
+    extern std::unique_ptr<GPUManager> g_gpu_manager;
+    if (!g_gpu_manager) {
+        std::cerr << "GPU manager not initialized" << std::endl;
+        return false;
+    }
+
+    if (!g_gpu_manager->attachGPUToVM(id_, config)) {
+        std::cerr << "Failed to attach GPU " << config.gpu_id << " to VM " << id_ << std::endl;
+        return false;
+    }
+
+    attached_gpus_.push_back(config.gpu_id);
+    std::cout << "Successfully attached GPU " << config.gpu_id << " to VM " << id_ << std::endl;
+    return true;
+}
+
+bool VMInstance::detachGPU(const std::string& gpu_id) {
+    std::lock_guard<std::mutex> lock(gpu_mutex_);
+
+    // Check if GPU is attached
+    auto it = std::find(attached_gpus_.begin(), attached_gpus_.end(), gpu_id);
+    if (it == attached_gpus_.end()) {
+        std::cerr << "GPU " << gpu_id << " not attached to VM " << id_ << std::endl;
+        return false;
+    }
+
+    // Use global GPU manager to detach GPU
+    extern std::unique_ptr<GPUManager> g_gpu_manager;
+    if (!g_gpu_manager) {
+        std::cerr << "GPU manager not initialized" << std::endl;
+        return false;
+    }
+
+    if (!g_gpu_manager->detachGPUFromVM(id_, gpu_id)) {
+        std::cerr << "Failed to detach GPU " << gpu_id << " from VM " << id_ << std::endl;
+        return false;
+    }
+
+    attached_gpus_.erase(it);
+    std::cout << "Successfully detached GPU " << gpu_id << " from VM " << id_ << std::endl;
+    return true;
+}
+
+std::vector<std::string> VMInstance::getAttachedGPUs() const {
+    std::lock_guard<std::mutex> lock(gpu_mutex_);
+    return attached_gpus_;
+}
+
+std::vector<VMInstance::GPUMetrics> VMInstance::getGPUMetrics() const {
+    std::vector<VMInstance::GPUMetrics> metrics;
+
+    extern std::unique_ptr<GPUManager> g_gpu_manager;
+    if (!g_gpu_manager) {
+        return metrics;
+    }
+
+    std::lock_guard<std::mutex> lock(gpu_mutex_);
+    for (const auto& gpu_id : attached_gpus_) {
+        auto gpu_metrics = g_gpu_manager->getGPUMetrics(gpu_id);
+        if (gpu_metrics) {
+            VMInstance::GPUMetrics vm_metrics;
+            vm_metrics.gpu_id = gpu_metrics->gpu_id;
+            vm_metrics.utilization_percent = gpu_metrics->utilization_percent;
+            vm_metrics.memory_utilization_percent = gpu_metrics->memory_utilization_percent;
+            vm_metrics.memory_used_mb = gpu_metrics->memory_used_mb;
+            vm_metrics.memory_total_mb = gpu_metrics->memory_total_mb;
+            vm_metrics.temperature_celsius = gpu_metrics->temperature_celsius;
+            vm_metrics.power_draw_watts = gpu_metrics->power_draw_watts;
+            vm_metrics.fan_speed_percent = gpu_metrics->fan_speed_percent;
+            vm_metrics.clock_speed_mhz = gpu_metrics->clock_speed_mhz;
+            metrics.push_back(vm_metrics);
+        }
+    }
+
+    return metrics;
+}
+
+bool VMInstance::isGPUAttached(const std::string& gpu_id) const {
+    std::lock_guard<std::mutex> lock(gpu_mutex_);
+    return std::find(attached_gpus_.begin(), attached_gpus_.end(), gpu_id) != attached_gpus_.end();
+}
+
 // End of VMInstance_Mechanics.cpp</content>
 <parameter name="filePath">d:\WD\Vellum\vellum\src\VMInstance_Mechanics.cpp

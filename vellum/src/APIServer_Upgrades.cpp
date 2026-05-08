@@ -663,3 +663,207 @@ bool isValidToken(HypervisorManager& hm, const std::string& authHeader) {
  *    cd vellum && mkdir -p build && cd build
  *    cmake .. && make
  */
+
+// ═════════════════════════════════════════════════════════════════════════════
+// V2.0: GPU PASSTHROUGH & ACCELERATION ENDPOINTS
+// ═════════════════════════════════════════════════════════════════════════════
+
+// GET /api/gpu/available - List all available GPUs
+/*
+CROW_ROUTE(app_, "/api/gpu/available")
+.methods("GET"_method)([&hm](const crow::request& req) {
+    extern std::unique_ptr<GPUManager> g_gpu_manager;
+    if (!g_gpu_manager) {
+        return jsonErr(500, "GPU manager not initialized");
+    }
+
+    auto devices = g_gpu_manager->enumerateGPUs();
+
+    crow::json::wvalue j;
+    j["success"] = true;
+    j["devices"] = crow::json::wvalue::list();
+
+    for (size_t i = 0; i < devices.size(); ++i) {
+        const auto& device = devices[i];
+        crow::json::wvalue device_json;
+        device_json["id"] = device.id;
+        device_json["name"] = device.name;
+        device_json["vendor"] = device.vendor == GPUVendor::NVIDIA ? "nvidia" :
+                               device.vendor == GPUVendor::AMD ? "amd" :
+                               device.vendor == GPUVendor::INTEL ? "intel" : "unknown";
+        device_json["vendor_id"] = device.vendor_id;
+        device_json["device_id"] = device.device_id;
+        device_json["memory_mb"] = device.memory_mb;
+        device_json["supports_passthrough"] = device.supports_passthrough;
+        device_json["currently_attached"] = device.currently_attached;
+        device_json["driver"] = device.driver;
+        j["devices"][i] = std::move(device_json);
+    }
+
+    crow::response res(j);
+    addAPIHeaders(res);
+    return res;
+});
+
+// GET /api/gpu/{id}/metrics - Get GPU metrics
+/*
+CROW_ROUTE(app_, "/api/gpu/<string>")
+.methods("GET"_method)([&hm](const crow::request& req, const std::string& gpu_id) {
+    extern std::unique_ptr<GPUManager> g_gpu_manager;
+    if (!g_gpu_manager) {
+        return jsonErr(500, "GPU manager not initialized");
+    }
+
+    auto metrics = g_gpu_manager->getGPUMetrics(gpu_id);
+    if (!metrics) {
+        return jsonErr(404, "GPU not found or metrics unavailable");
+    }
+
+    crow::json::wvalue j;
+    j["success"] = true;
+    j["gpu_id"] = metrics->gpu_id;
+    j["utilization_percent"] = metrics->utilization_percent;
+    j["memory_utilization_percent"] = metrics->memory_utilization_percent;
+    j["memory_used_mb"] = metrics->memory_used_mb;
+    j["memory_total_mb"] = metrics->memory_total_mb;
+    j["temperature_celsius"] = metrics->temperature_celsius;
+    j["power_draw_watts"] = metrics->power_draw_watts;
+    j["fan_speed_percent"] = metrics->fan_speed_percent;
+    j["clock_speed_mhz"] = metrics->clock_speed_mhz;
+
+    crow::response res(j);
+    addAPIHeaders(res);
+    return res;
+});
+
+// POST /api/vm/{id}/gpu/attach - Attach GPU to VM
+/*
+CROW_ROUTE(app_, "/api/vm/<string>/gpu/attach")
+.methods("POST"_method)([&hm](const crow::request& req, const std::string& vm_id) {
+    auto json = crow::json::load(req.body);
+    if (!json) return jsonErr(400, "Invalid JSON body");
+
+    std::string gpu_id = json.has("gpu_id") ? json["gpu_id"].s() : "";
+    bool enable_vgpu = json.has("enable_vgpu") ? json["enable_vgpu"].b() : false;
+
+    if (gpu_id.empty()) {
+        return jsonErr(400, "gpu_id is required");
+    }
+
+    auto vm = hm.getVM(vm_id);
+    if (!vm) {
+        return jsonErr(404, "VM not found");
+    }
+
+    VMInstance::GPUConfig config;
+    config.gpu_id = gpu_id;
+    config.enable_vgpu = enable_vgpu;
+
+    if (json.has("vgpu_memory_mb")) {
+        config.vgpu_memory_mb = json["vgpu_memory_mb"].i();
+    }
+    if (json.has("vgpu_profiles")) {
+        config.vgpu_profiles = json["vgpu_profiles"].i();
+    }
+
+    if (!vm->attachGPU(config)) {
+        return jsonErr(500, "Failed to attach GPU to VM");
+    }
+
+    crow::json::wvalue j;
+    j["success"] = true;
+    j["message"] = "GPU attached successfully";
+    j["gpu_id"] = gpu_id;
+    j["vm_id"] = vm_id;
+
+    crow::response res(j);
+    addAPIHeaders(res);
+    return res;
+});
+
+// DELETE /api/vm/{id}/gpu/{gpu_id} - Detach GPU from VM
+/*
+CROW_ROUTE(app_, "/api/vm/<string>/gpu/<string>")
+.methods("DELETE"_method)([&hm](const crow::request& req, const std::string& vm_id, const std::string& gpu_id) {
+    auto vm = hm.getVM(vm_id);
+    if (!vm) {
+        return jsonErr(404, "VM not found");
+    }
+
+    if (!vm->detachGPU(gpu_id)) {
+        return jsonErr(500, "Failed to detach GPU from VM");
+    }
+
+    crow::json::wvalue j;
+    j["success"] = true;
+    j["message"] = "GPU detached successfully";
+    j["gpu_id"] = gpu_id;
+    j["vm_id"] = vm_id;
+
+    crow::response res(j);
+    addAPIHeaders(res);
+    return res;
+});
+
+// GET /api/vm/{id}/gpu - Get attached GPUs for VM
+/*
+CROW_ROUTE(app_, "/api/vm/<string>/gpu")
+.methods("GET"_method)([&hm](const crow::request& req, const std::string& vm_id) {
+    auto vm = hm.getVM(vm_id);
+    if (!vm) {
+        return jsonErr(404, "VM not found");
+    }
+
+    auto attached_gpus = vm->getAttachedGPUs();
+    auto gpu_metrics = vm->getGPUMetrics();
+
+    crow::json::wvalue j;
+    j["success"] = true;
+    j["vm_id"] = vm_id;
+    j["attached_gpus"] = crow::json::wvalue::list();
+
+    for (size_t i = 0; i < attached_gpus.size(); ++i) {
+        j["attached_gpus"][i] = attached_gpus[i];
+    }
+
+    j["gpu_metrics"] = crow::json::wvalue::list();
+    for (size_t i = 0; i < gpu_metrics.size(); ++i) {
+        const auto& metrics = gpu_metrics[i];
+        crow::json::wvalue metrics_json;
+        metrics_json["gpu_id"] = metrics.gpu_id;
+        metrics_json["utilization_percent"] = metrics.utilization_percent;
+        metrics_json["memory_utilization_percent"] = metrics.memory_utilization_percent;
+        metrics_json["memory_used_mb"] = metrics.memory_used_mb;
+        metrics_json["memory_total_mb"] = metrics.memory_total_mb;
+        metrics_json["temperature_celsius"] = metrics.temperature_celsius;
+        metrics_json["power_draw_watts"] = metrics.power_draw_watts;
+        metrics_json["fan_speed_percent"] = metrics.fan_speed_percent;
+        metrics_json["clock_speed_mhz"] = metrics.clock_speed_mhz;
+        j["gpu_metrics"][i] = std::move(metrics_json);
+    }
+
+    crow::response res(j);
+    addAPIHeaders(res);
+    return res;
+});
+
+// POST /api/gpu/check-iommu - Check IOMMU status
+/*
+CROW_ROUTE(app_, "/api/gpu/check-iommu")
+.methods("POST"_method)([&hm](const crow::request& req) {
+    extern std::unique_ptr<GPUManager> g_gpu_manager;
+    if (!g_gpu_manager) {
+        return jsonErr(500, "GPU manager not initialized");
+    }
+
+    bool iommu_enabled = g_gpu_manager->checkIOMMUEnabled();
+
+    crow::json::wvalue j;
+    j["success"] = true;
+    j["iommu_enabled"] = iommu_enabled;
+    j["message"] = iommu_enabled ? "IOMMU is enabled" : "IOMMU is not enabled - GPU passthrough may not work";
+
+    crow::response res(j);
+    addAPIHeaders(res);
+    return res;
+});

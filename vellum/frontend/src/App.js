@@ -9,6 +9,7 @@ import Divider from '@mui/material/Divider';
 import VMList from './components/VMList';
 import VMConsole from './components/VMConsole';
 import VMMetrics from './components/VMMetrics';
+import GPUManager from './components/GPUManager';
 
 // ── API base (proxied via package.json's proxy or same origin in prod) ─────
 const API = '';
@@ -320,6 +321,22 @@ function App() {
           </div>
         );
 
+      case 'GPU':
+        return (
+          <div className="flex flex-col h-full space-y-6 overflow-y-auto pr-1">
+            <h2 className="text-3xl font-bold text-transparent bg-clip-text
+                           bg-gradient-to-r from-blue-400 to-purple-500">
+              GPU Management
+            </h2>
+            <div className="glass-dark rounded-2xl p-6 border border-white/10">
+              <GPUManager
+                selectedVM={selectedVM}
+                onVMUpdate={fetchVMs}
+              />
+            </div>
+          </div>
+        );
+
       case 'LOG':
         return (
           <div className="h-full flex flex-col">
@@ -353,6 +370,7 @@ function App() {
   const navItems = [
     { id: 'HOME', icon: '⚡', label: 'Home' },
     { id: 'VM',   icon: '🖥', label: 'VMs'  },
+    { id: 'GPU',  icon: '🎮', label: 'GPUs' },
     { id: 'LOG',  icon: '📋', label: 'Logs' },
   ];
 
