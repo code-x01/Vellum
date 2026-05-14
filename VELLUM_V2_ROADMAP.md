@@ -115,6 +115,3 @@ v2.0 maintains backward compatibility while adding opt-in advanced features:
 - Migration tools provided for data and configuration
 
 ---
-
-**Ready to implement v2.0? Let's start with Phase 2a - which feature would you like to tackle first?**</content>
-<parameter name="filePath">d:\WD\Vellum\VELLUM_V2_ROADMAP.md
